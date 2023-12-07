@@ -63,7 +63,7 @@ def extract_bcv_values(dataframe):
 
 def filter_dataframe(dataframe):
 	"""Filter out players with BCV equal to 1.00 and remove rows with 'nan' position type."""
-	#dataframe = dataframe[dataframe['BCV'] != 1.00]
+	dataframe = dataframe[dataframe['BCV'] != 1.00]
 	dataframe = dataframe[dataframe['Position'].notna()]
 	return dataframe
 
@@ -80,6 +80,8 @@ def main():
 	df = extract_bcv_values(df)
 	df = filter_dataframe(df)
 	all_players_df = df.sort_values(by='BCV', ascending=False)
+
+	top_players_by_position = get_top_players_by_position(all_players_df)
 
 	matching_names_df = pd.read_csv('../source_data/matching_names.csv')
 	managers_df = pd.read_csv('../source_data/manager_ids.csv')
@@ -201,7 +203,7 @@ def main():
 			print(recommendations)
 		'''
 
-	#print(get_top_players_by_position(all_players_df))
+	print(top_players_by_position)
 
 
 
