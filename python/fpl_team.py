@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import requests
 from transfer_recommendation import recommend_transfers_one_transfer
@@ -76,19 +77,25 @@ def get_top_players_by_position(dataframe):
 	return top_players_by_position
 
 def main():
-	df = pd.read_csv('../source_data/TransferAlgorithm.csv', encoding='ISO-8859-1')
+	source_data_files_path = '../source_data/'
+	if os.path.isdir(source_data_files_path) != True:
+		raise ValueError("The python file is not run from the correct directory. Please navigate to the '/python' directory first.")
+	
+	df = pd.read_csv(f'{source_data_files_path}TransferAlgorithm.csv', encoding='ISO-8859-1')
+	headers = pd.read_csv(f'{source_data_files_path}TransferAlgorithm.csv', encoding='ISO-8859-1', nrows=0)
 	df = extract_bcv_values(df)
 	df = filter_dataframe(df)
 	all_players_df = df.sort_values(by='BCV', ascending=False)
 
 	top_players_by_position = get_top_players_by_position(all_players_df)
 
-	matching_names_df = pd.read_csv('../source_data/matching_names.csv')
-	managers_df = pd.read_csv('../source_data/manager_ids.csv')
+	matching_names_df = pd.read_csv(f'{source_data_files_path}matching_names.csv')
+	managers_df = pd.read_csv(f'{source_data_files_path}manager_ids.csv')
 
-
-	last_gameweek = 14
-
+	
+	next_gameweek = int(headers.columns[10])
+	last_gameweek = next_gameweek - 1
+	
 	for index, row in managers_df.iterrows():
 		manager_id = row['ID']
 		manager_name = row['Manager']
@@ -137,7 +144,7 @@ def main():
 			print(non_matching_players[['web_name']])
 		
 		print(f"\n{manager_name}'s Full Merged Team Data:")
-		print(merged_team_df_BCV[['web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1), str(last_gameweek + 2), str(last_gameweek + 3)]])
+		print(merged_team_df_BCV[['web_name', 'Position', 'Team', ' Price ', 'BCV', str(next_gameweek), str(next_gameweek + 1), str(next_gameweek + 2)]])
 		
 		
 		# Define FPL team position rules
@@ -146,7 +153,7 @@ def main():
 		bench = {'GK': [], 'D': [], 'M': [], 'F': []}
 
 		# Sort players for the next gameweek and pick the starting 11 and bench players according to FPL rules
-		sorted_players = merged_team_df.sort_values(by=str(last_gameweek + 1), ascending=False)
+		sorted_players = merged_team_df.sort_values(by=str(next_gameweek), ascending=False)
 		# Populate the starting eleven and bench
 		for position, min_count in fpl_positions.items():
 			position_players = sorted_players[sorted_players['Position'] == position]
@@ -185,14 +192,14 @@ def main():
 			selected_starting_eleven = selected_starting_eleven.sort_values(by='PositionOrder')
 
 		if not selected_bench.empty:
-			selected_bench = selected_bench.sort_values(by=str(last_gameweek + 1), ascending=False)
+			selected_bench = selected_bench.sort_values(by=str(next_gameweek), ascending=False)
 
 		# Print the recommended starting eleven and bench
-		print(f"\n{manager_name}'s Recommended Starting 11 for Gameweek {last_gameweek + 1}:")
-		print(selected_starting_eleven[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1)]])
+		print(f"\n{manager_name}'s Recommended Starting 11 for Gameweek {next_gameweek}:")
+		print(selected_starting_eleven[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(next_gameweek)]])
 
-		print(f"\n{manager_name}'s Recommended Bench for Gameweek {last_gameweek + 1}:")
-		print(selected_bench[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1)]])
+		print(f"\n{manager_name}'s Recommended Bench for Gameweek {next_gameweek}:")
+		print(selected_bench[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(next_gameweek)]])
 
 		'''
 		if wildcard:
