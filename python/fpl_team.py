@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 from transfer_recommendation import recommend_transfers_one_transfer
 from transfer_recommendation import recommend_transfers_wildcard
+from transfer_recommendation import recommend_transfers_free_hit
 
 
 def read_team_from_api(manager_id, gameweek):
@@ -69,12 +70,12 @@ def filter_dataframe(dataframe):
 	return dataframe
 
 def get_top_players_by_position(dataframe):
-	"""Get the top 10 players for each position based on BCV values."""
 	top_players_by_position = {}
 	for position in dataframe['Position'].unique():
 		top_players = dataframe[dataframe['Position'] == position].head(10)
 		top_players_by_position[position] = top_players
 	return top_players_by_position
+
 
 def main():
 	source_data_files_path = '../source_data/'
@@ -95,13 +96,12 @@ def main():
 	
 	next_gameweek = int(headers.columns[10])
 	last_gameweek = next_gameweek - 1
-	
-	top_players_by_position = get_top_players_by_position(all_players_df[['Position', 'Player', 'Team', ' Price ', 'BCV', str(next_gameweek)]])
 
 	for index, row in managers_df.iterrows():
 		manager_id = row['ID']
 		manager_name = row['Manager']
 		wildcard = row.get('Wildcard', False)
+		free_hit = row.get('Free hit', False)
 
 		your_team_df = read_team_from_api(manager_id, last_gameweek)
 
@@ -150,48 +150,41 @@ def main():
 		
 		
 		# Define FPL team position rules
-		fpl_positions = {'GK': 1, 'D': 3, 'M': 2, 'F': 1}  # Minimum required players
+		fpl_positions_min = {'GK': 1, 'D': 3, 'M': 2, 'F': 1}  # Minimum required players
+		fpl_positions_max = {'GK': 1, 'D': 5, 'M': 5, 'F': 3}  # Maximum allowed players
+
 		starting_eleven = {'GK': [], 'D': [], 'M': [], 'F': []}
 		bench = {'GK': [], 'D': [], 'M': [], 'F': []}
 
-		# Sort players for the next gameweek and pick the starting 11 and bench players according to FPL rules
+		# Sort players for the next gameweek
 		sorted_players = merged_team_df.sort_values(by=str(next_gameweek), ascending=False)
-		
-		# Populate the starting eleven and bench
-		for position, min_count in fpl_positions.items():
-			position_players = sorted_players[sorted_players['Position'] == position]
-			starting_players = position_players.head(min_count)
-			bench_players = position_players.iloc[min_count:]
-			starting_eleven[position].extend(starting_players.to_dict('records'))  # Extend the list of dicts
-			bench[position].extend(bench_players.to_dict('records'))  # Extend the list of dicts
 
-		# Count the total players in starting eleven
-		total_starting_players = sum(len(players) for players in starting_eleven.values())
+		# Function to check if the position limit has been reached
+		def position_limit_reached(position, team):
+			return len(team[position]) >= fpl_positions_max[position]
 
-		# Add additional players to the starting eleven if less than 11
-		additional_players_needed = 11 - total_starting_players
-		if additional_players_needed > 0:
-			for position in sorted(fpl_positions, key=fpl_positions.get, reverse=True):
-				if additional_players_needed == 0:
-					break
-				available_bench_players = [player for player in bench[position] if player not in starting_eleven[position]]
-				additional_players = available_bench_players[:additional_players_needed]
-				starting_eleven[position].extend(additional_players)
-				additional_players_needed -= len(additional_players)
-				# Remove the additional players from the bench
-				bench[position] = [player for player in bench[position] if player not in additional_players]
+		# Populate starting eleven with top players, considering minimum and maximum per position
+		for _, player in sorted_players.iterrows():
+			position = player['Position']
+			if position in fpl_positions_min:  # Check if the position is valid
+				if sum(len(players) for players in starting_eleven.values()) < 11:
+					if len(starting_eleven[position]) < fpl_positions_min[position] or (not position_limit_reached(position, starting_eleven) and sum(len(players) for players in starting_eleven.values()) < 11):
+						starting_eleven[position].append(player)
+					else:
+						if not position_limit_reached(position, bench):
+							bench[position].append(player)
+				else:
+					if not position_limit_reached(position, bench):
+						bench[position].append(player)
 
-		# Flatten the starting_eleven and bench dictionaries to create a combined list of DataFrames
+		# Flatten and sort the DataFrames
 		starting_eleven_df_list = [pd.DataFrame(starting_eleven[pos]) for pos in starting_eleven if starting_eleven[pos]]
 		bench_df_list = [pd.DataFrame(bench[pos]) for pos in bench if bench[pos]]
 
-		# Concatenate the starting eleven and bench dataframes
 		selected_starting_eleven = pd.concat(starting_eleven_df_list) if starting_eleven_df_list else pd.DataFrame()
 		selected_bench = pd.concat(bench_df_list) if bench_df_list else pd.DataFrame()
 
-		# If DataFrames are not empty, sort them by 'PositionOrder'
 		if not selected_starting_eleven.empty:
-			selected_starting_eleven['PositionOrder'] = selected_starting_eleven['Position'].map(position_order)
 			selected_starting_eleven = selected_starting_eleven.sort_values(by='PositionOrder')
 
 		if not selected_bench.empty:
@@ -204,16 +197,27 @@ def main():
 		print(f"\n{manager_name}'s Recommended Bench for Gameweek {next_gameweek}:")
 		print(selected_bench[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(next_gameweek)]])
 
-		'''
+		
 		if wildcard:
-			result_df = recommend_transfers_wildcard(all_players_df, current_bank_value, current_team_value)
-			print(result_df)
+			#result_df = recommend_transfers_wildcard(all_players_df, current_bank_value, current_team_value)
+			#print(result_df)
+			print('\nManager has chosen a wildcard')
+		elif free_hit:
+			print('\nManager has chosen a free hit')
+			print(f"\nTop 10 transfer options by position considering expected value for Gameweek {next_gameweek}:")
+			sorted_players_free_hit = df.sort_values(by=str(next_gameweek), ascending=False)
+			top_players_by_position_free_hit = get_top_players_by_position(sorted_players_free_hit[['Position', 'Player', 'Team', ' Price ', 'BCV', str(next_gameweek)]])
+			print(top_players_by_position_free_hit)
+			#result_df = recommend_transfers_free_hit(all_players_df, current_bank_value, current_team_value, next_gameweek)
+			#print(result_df)
 		else:
-			recommendations = recommend_transfers_one_transfer(all_players_df, current_bank_value, current_team_value, your_team_df)
-			print(recommendations)
-		'''
-	print(f"\nTop 10 transfer options by position for Gameweek {next_gameweek}:")
-	print(top_players_by_position)
+			#recommendations = recommend_transfers_one_transfer(all_players_df, current_bank_value, current_team_value, your_team_df)
+			#print(recommendations)
+			print('\nNo recommendations yet')
+		
+	print(f"\nTop 10 transfer options by position considering BCV for Gameweek {next_gameweek}:")
+	top_players_by_position_BCV = get_top_players_by_position(all_players_df[['Position', 'Player', 'Team', ' Price ', 'BCV', str(next_gameweek)]])
+	print(top_players_by_position_BCV)
 
 
 
