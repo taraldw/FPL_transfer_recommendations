@@ -87,7 +87,7 @@ def main():
 	df = filter_dataframe(df)
 	all_players_df = df.sort_values(by='BCV', ascending=False)
 
-	top_players_by_position = get_top_players_by_position(all_players_df)
+	
 
 	matching_names_df = pd.read_csv(f'{source_data_files_path}matching_names.csv')
 	managers_df = pd.read_csv(f'{source_data_files_path}manager_ids.csv')
@@ -96,6 +96,8 @@ def main():
 	next_gameweek = int(headers.columns[10])
 	last_gameweek = next_gameweek - 1
 	
+	top_players_by_position = get_top_players_by_position(all_players_df[['Position', 'Player', 'Team', ' Price ', 'BCV', str(next_gameweek)]])
+
 	for index, row in managers_df.iterrows():
 		manager_id = row['ID']
 		manager_name = row['Manager']
@@ -154,6 +156,7 @@ def main():
 
 		# Sort players for the next gameweek and pick the starting 11 and bench players according to FPL rules
 		sorted_players = merged_team_df.sort_values(by=str(next_gameweek), ascending=False)
+		
 		# Populate the starting eleven and bench
 		for position, min_count in fpl_positions.items():
 			position_players = sorted_players[sorted_players['Position'] == position]
@@ -209,7 +212,7 @@ def main():
 			recommendations = recommend_transfers_one_transfer(all_players_df, current_bank_value, current_team_value, your_team_df)
 			print(recommendations)
 		'''
-
+	print(f"\nTop 10 transfer options by position for Gameweek {next_gameweek}:")
 	print(top_players_by_position)
 
 
