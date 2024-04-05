@@ -1,5 +1,5 @@
-ID,Manager,Wildcard,Free hit
-3602494,Tarald,False,False
-5144392,Eirik,False,False
-7635468,Declan,False,False
-3964640,Erik,False,False
+ID,Manager,Wildcard,Free hit,Include
+3602494,Tarald,False,False,True
+5144392,Eirik,False,False,True
+7635468,Declan,False,False,False
+3964640,Erik,False,False,False
