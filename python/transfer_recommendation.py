@@ -50,15 +50,15 @@ def pick_better_player(current_budget, position, selected_players_list, all_play
     better_players = all_players_df[(all_players_df['Position'] == position) & (~all_players_df['Player'].isin([x['Player'] for x in selected_players_list]))]
     better_players = better_players.sort_values(by='BCV', ascending=False)
     for _, player in better_players.iterrows():
-        if player[' Price '] <= current_budget:
+        if player['Price'] <= current_budget:
             selected_players_list.append({
                 'Player': player['Player'],
                 'Position': player['Position'],
                 'BCV': player['BCV'],
-                'Price': player[' Price '],
+                'Price': player['Price'],
                 'Team': player['Team']  # Storing team information
             })
-            current_budget -= player[' Price ']
+            current_budget -= player['Price']
             break
     return current_budget, selected_players_list
 
@@ -70,7 +70,7 @@ def recommend_transfers_wildcard(all_players_df, current_bank_value, current_tea
     team_player_count = {}
 
     def get_cheap_players(position):
-        return all_players_df[all_players_df['Position'] == position].nsmallest(1, ' Price ').sort_values(by='BCV', ascending=False)
+        return all_players_df[all_players_df['Position'] == position].nsmallest(1, 'Price').sort_values(by='BCV', ascending=False)
 
     def add_player_to_selected(player, position):
         nonlocal budget
@@ -81,12 +81,12 @@ def recommend_transfers_wildcard(all_players_df, current_bank_value, current_tea
             'Player': player['Player'],
             'Position': position,
             'BCV': player['BCV'],
-            'Price': player[' Price '],
+            'Price': player['Price'],
             'Team': player['Team']
         })
         team = player['Team']
         team_player_count[team] = team_player_count.get(team, 0) + 1
-        budget -= player[' Price ']
+        budget -= player['Price']
         positions[position] -= 1
 
     selected_players_list = []
@@ -95,7 +95,7 @@ def recommend_transfers_wildcard(all_players_df, current_bank_value, current_tea
         cheap_players = get_cheap_players(pos)
         if not cheap_players.empty:
             top_cheap_player = cheap_players.iloc[0]
-            if positions[pos] > 0 and top_cheap_player[' Price '] <= budget:
+            if positions[pos] > 0 and top_cheap_player['Price'] <= budget:
                 team = top_cheap_player['Team']
                 if team_player_count.get(team, 0) < 3:
                     add_player_to_selected(top_cheap_player, pos)
@@ -107,7 +107,7 @@ def recommend_transfers_wildcard(all_players_df, current_bank_value, current_tea
         ]
         position_players = position_players.sort_values(by='BCV', ascending=False)
         for _, player in position_players.iterrows():
-            if positions[pos] > 0 and player[' Price '] <= budget:
+            if positions[pos] > 0 and player['Price'] <= budget:
                 team = player['Team']
                 if team_player_count.get(team, 0) < 3:
                     add_player_to_selected(player, pos)
@@ -145,7 +145,7 @@ def recommend_transfers_free_hit(all_players_df, current_bank_value, current_tea
     team_player_count = {}
 
     def get_cheap_players(position):
-        return all_players_df[all_players_df['Position'] == position].nsmallest(1, ' Price ').sort_values(by=str(next_gameweek), ascending=False)
+        return all_players_df[all_players_df['Position'] == position].nsmallest(1, 'Price').sort_values(by=str(next_gameweek), ascending=False)
 
     def add_player_to_selected(player, position):
         nonlocal budget
@@ -156,12 +156,12 @@ def recommend_transfers_free_hit(all_players_df, current_bank_value, current_tea
             'Player': player['Player'],
             'Position': position,
             str(next_gameweek): player[str(next_gameweek)],
-            'Price': player[' Price '],
+            'Price': player['Price'],
             'Team': player['Team']
         })
         team = player['Team']
         team_player_count[team] = team_player_count.get(team, 0) + 1
-        budget -= player[' Price ']
+        budget -= player['Price']
         positions[position] -= 1
 
     selected_players_list = []
@@ -170,7 +170,7 @@ def recommend_transfers_free_hit(all_players_df, current_bank_value, current_tea
         cheap_players = get_cheap_players(pos)
         if not cheap_players.empty:
             top_cheap_player = cheap_players.iloc[0]
-            if positions[pos] > 0 and top_cheap_player[' Price '] <= budget:
+            if positions[pos] > 0 and top_cheap_player['Price'] <= budget:
                 team = top_cheap_player['Team']
                 if team_player_count.get(team, 0) < 3:
                     add_player_to_selected(top_cheap_player, pos)
@@ -182,7 +182,7 @@ def recommend_transfers_free_hit(all_players_df, current_bank_value, current_tea
         ]
         position_players = position_players.sort_values(by=str(next_gameweek), ascending=False)
         for _, player in position_players.iterrows():
-            if positions[pos] > 0 and player[' Price '] <= budget:
+            if positions[pos] > 0 and player['Price'] <= budget:
                 team = player['Team']
                 if team_player_count.get(team, 0) < 3:
                     add_player_to_selected(player, pos)
