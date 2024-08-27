@@ -65,6 +65,7 @@ def filter_dataframe(dataframe):
 	"""Filter out players with BCV equal to 1.00 and remove rows with 'nan' position type."""
 	dataframe = dataframe[dataframe['BCV'] != 1.00]
 	dataframe = dataframe[dataframe['Position'].notna()]
+	dataframe = dataframe[dataframe['Player'] != 'Wood'] # Removes the defender Wood from the source data since the web_name Wood in the FPL api matches the forward
 	return dataframe
 
 def get_top_players_by_position(dataframe):
@@ -84,10 +85,10 @@ def main():
 	top_players_by_position = get_top_players_by_position(all_players_df)
 
 	matching_names_df = pd.read_csv('../source_data/matching_names.csv')
-	managers_df = pd.read_csv('../source_data/manager_ids.csv')
+	managers_df = pd.read_csv('../source_data/manager_ids_2024.csv')
 
 
-	last_gameweek = 14
+	last_gameweek = 2
 
 	for index, row in managers_df.iterrows():
 		manager_id = row['ID']
@@ -141,7 +142,7 @@ def main():
 		
 		
 		# Define FPL team position rules
-		fpl_positions = {'GK': 1, 'D': 3, 'M': 2, 'F': 1}  # Minimum required players
+		fpl_positions = {'GK': 1, 'D': 3, 'M': 4, 'F': 2}  # Minimum required players, added temp fix to prioritize midfielders and forwards
 		starting_eleven = {'GK': [], 'D': [], 'M': [], 'F': []}
 		bench = {'GK': [], 'D': [], 'M': [], 'F': []}
 
