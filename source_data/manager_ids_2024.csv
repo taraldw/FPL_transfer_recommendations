@@ -1,3 +1,4 @@
-ID,Manager,Wildcard
-3007122,Tarald,False
-3340671, Erik, False
+ID,Manager,Wildcard,Include
+3007122,Tarald,False,True
+3340671,Erik,False,False
+6172429,Eirik,False,True

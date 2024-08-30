@@ -94,117 +94,121 @@ def main():
 		manager_id = row['ID']
 		manager_name = row['Manager']
 		wildcard = row.get('Wildcard', False)
+		include = row.get('Include', False)
 
-		your_team_df = read_team_from_api(manager_id, last_gameweek)
 
-		current_bank_value, current_team_value = read_manager_info_from_api(manager_id)
+		if include:
+
+			your_team_df = read_team_from_api(manager_id, last_gameweek)
+
+			current_bank_value, current_team_value = read_manager_info_from_api(manager_id)
+			
+			print(f"{manager_name}'s Team value:")
+			print(current_team_value)
+
+			print(f"{manager_name}'s current bank:")
+			print(current_bank_value)
+
+			# Merge with matching names to ensure all web names have a corresponding 'Player' column
+			your_team_df = pd.merge(
+				left=your_team_df,
+				right=matching_names_df,
+				how='left',
+				left_on='web_name',
+				right_on='web_name'
+			)
+
+			# Replace web_name with the correct 'Player' name from matching_names_df
+			your_team_df['Player'] = your_team_df['Player'].combine_first(your_team_df['web_name'])
+
+			# Now merge with all_players_df using the corrected 'Player' names
+			merged_team_df = pd.merge(
+				left=your_team_df,
+				right=all_players_df,
+				how='left',
+				on='Player'
+			)
 		
-		print(f"{manager_name}'s Team value:")
-		print(current_team_value)
+			non_matching_rows = merged_team_df['BCV'].isna()
+			merged_team_df.loc[non_matching_rows, ['Position', 'Team', ' Price ', 'BCV']] = [None, None, None, None]
 
-		print(f"{manager_name}'s current bank:")
-		print(current_bank_value)
+			position_order = {"GK": 1, "D": 2, "M": 3, "F": 4}
+			merged_team_df['PositionOrder'] = merged_team_df['Position'].map(position_order)
+			merged_team_df_BCV = merged_team_df.sort_values(by=['PositionOrder', 'BCV'], ascending=[True, False]).drop(columns='PositionOrder')
+			
+			non_matching_players = merged_team_df[non_matching_rows]
+			if not non_matching_players.empty:
+				print("\nThe following players did not have matching data:")
+				print(non_matching_players[['web_name']])
+			
+			print(f"\n{manager_name}'s Full Merged Team Data:")
+			print(merged_team_df_BCV[['web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1), str(last_gameweek + 2), str(last_gameweek + 3)]])
+			
+			
+			# Define FPL team position rules
+			fpl_positions = {'GK': 1, 'D': 3, 'M': 4, 'F': 2}  # Minimum required players, added temp fix to prioritize midfielders and forwards
+			starting_eleven = {'GK': [], 'D': [], 'M': [], 'F': []}
+			bench = {'GK': [], 'D': [], 'M': [], 'F': []}
 
-		# Merge with matching names to ensure all web names have a corresponding 'Player' column
-		your_team_df = pd.merge(
-			left=your_team_df,
-			right=matching_names_df,
-			how='left',
-			left_on='web_name',
-			right_on='web_name'
-		)
+			# Sort players for the next gameweek and pick the starting 11 and bench players according to FPL rules
+			sorted_players = merged_team_df.sort_values(by=str(last_gameweek + 1), ascending=False)
+			# Populate the starting eleven and bench
+			for position, min_count in fpl_positions.items():
+				position_players = sorted_players[sorted_players['Position'] == position]
+				starting_players = position_players.head(min_count)
+				bench_players = position_players.iloc[min_count:]
+				starting_eleven[position].extend(starting_players.to_dict('records'))  # Extend the list of dicts
+				bench[position].extend(bench_players.to_dict('records'))  # Extend the list of dicts
 
-		# Replace web_name with the correct 'Player' name from matching_names_df
-		your_team_df['Player'] = your_team_df['Player'].combine_first(your_team_df['web_name'])
+			# Count the total players in starting eleven
+			total_starting_players = sum(len(players) for players in starting_eleven.values())
 
-		# Now merge with all_players_df using the corrected 'Player' names
-		merged_team_df = pd.merge(
-			left=your_team_df,
-			right=all_players_df,
-			how='left',
-			on='Player'
-		)
-	
-		non_matching_rows = merged_team_df['BCV'].isna()
-		merged_team_df.loc[non_matching_rows, ['Position', 'Team', ' Price ', 'BCV']] = [None, None, None, None]
+			# Add additional players to the starting eleven if less than 11
+			additional_players_needed = 11 - total_starting_players
+			if additional_players_needed > 0:
+				for position in sorted(fpl_positions, key=fpl_positions.get, reverse=True):
+					if additional_players_needed == 0:
+						break
+					available_bench_players = [player for player in bench[position] if player not in starting_eleven[position]]
+					additional_players = available_bench_players[:additional_players_needed]
+					starting_eleven[position].extend(additional_players)
+					additional_players_needed -= len(additional_players)
+					# Remove the additional players from the bench
+					bench[position] = [player for player in bench[position] if player not in additional_players]
 
-		position_order = {"GK": 1, "D": 2, "M": 3, "F": 4}
-		merged_team_df['PositionOrder'] = merged_team_df['Position'].map(position_order)
-		merged_team_df_BCV = merged_team_df.sort_values(by=['PositionOrder', 'BCV'], ascending=[True, False]).drop(columns='PositionOrder')
-		
-		non_matching_players = merged_team_df[non_matching_rows]
-		if not non_matching_players.empty:
-			print("\nThe following players did not have matching data:")
-			print(non_matching_players[['web_name']])
-		
-		print(f"\n{manager_name}'s Full Merged Team Data:")
-		print(merged_team_df_BCV[['web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1), str(last_gameweek + 2), str(last_gameweek + 3)]])
-		
-		
-		# Define FPL team position rules
-		fpl_positions = {'GK': 1, 'D': 3, 'M': 4, 'F': 2}  # Minimum required players, added temp fix to prioritize midfielders and forwards
-		starting_eleven = {'GK': [], 'D': [], 'M': [], 'F': []}
-		bench = {'GK': [], 'D': [], 'M': [], 'F': []}
+			# Flatten the starting_eleven and bench dictionaries to create a combined list of DataFrames
+			starting_eleven_df_list = [pd.DataFrame(starting_eleven[pos]) for pos in starting_eleven if starting_eleven[pos]]
+			bench_df_list = [pd.DataFrame(bench[pos]) for pos in bench if bench[pos]]
 
-		# Sort players for the next gameweek and pick the starting 11 and bench players according to FPL rules
-		sorted_players = merged_team_df.sort_values(by=str(last_gameweek + 1), ascending=False)
-		# Populate the starting eleven and bench
-		for position, min_count in fpl_positions.items():
-			position_players = sorted_players[sorted_players['Position'] == position]
-			starting_players = position_players.head(min_count)
-			bench_players = position_players.iloc[min_count:]
-			starting_eleven[position].extend(starting_players.to_dict('records'))  # Extend the list of dicts
-			bench[position].extend(bench_players.to_dict('records'))  # Extend the list of dicts
+			# Concatenate the starting eleven and bench dataframes
+			selected_starting_eleven = pd.concat(starting_eleven_df_list) if starting_eleven_df_list else pd.DataFrame()
+			selected_bench = pd.concat(bench_df_list) if bench_df_list else pd.DataFrame()
 
-		# Count the total players in starting eleven
-		total_starting_players = sum(len(players) for players in starting_eleven.values())
+			# If DataFrames are not empty, sort them by 'PositionOrder'
+			if not selected_starting_eleven.empty:
+				selected_starting_eleven['PositionOrder'] = selected_starting_eleven['Position'].map(position_order)
+				selected_starting_eleven = selected_starting_eleven.sort_values(by='PositionOrder')
 
-		# Add additional players to the starting eleven if less than 11
-		additional_players_needed = 11 - total_starting_players
-		if additional_players_needed > 0:
-			for position in sorted(fpl_positions, key=fpl_positions.get, reverse=True):
-				if additional_players_needed == 0:
-					break
-				available_bench_players = [player for player in bench[position] if player not in starting_eleven[position]]
-				additional_players = available_bench_players[:additional_players_needed]
-				starting_eleven[position].extend(additional_players)
-				additional_players_needed -= len(additional_players)
-				# Remove the additional players from the bench
-				bench[position] = [player for player in bench[position] if player not in additional_players]
+			if not selected_bench.empty:
+				selected_bench = selected_bench.sort_values(by=str(last_gameweek + 1), ascending=False)
 
-		# Flatten the starting_eleven and bench dictionaries to create a combined list of DataFrames
-		starting_eleven_df_list = [pd.DataFrame(starting_eleven[pos]) for pos in starting_eleven if starting_eleven[pos]]
-		bench_df_list = [pd.DataFrame(bench[pos]) for pos in bench if bench[pos]]
+			# Print the recommended starting eleven and bench
+			print(f"\n{manager_name}'s Recommended Starting 11 for Gameweek {last_gameweek + 1}:")
+			print(selected_starting_eleven[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1)]])
 
-		# Concatenate the starting eleven and bench dataframes
-		selected_starting_eleven = pd.concat(starting_eleven_df_list) if starting_eleven_df_list else pd.DataFrame()
-		selected_bench = pd.concat(bench_df_list) if bench_df_list else pd.DataFrame()
+			print(f"\n{manager_name}'s Recommended Bench for Gameweek {last_gameweek + 1}:")
+			print(selected_bench[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1)]])
 
-		# If DataFrames are not empty, sort them by 'PositionOrder'
-		if not selected_starting_eleven.empty:
-			selected_starting_eleven['PositionOrder'] = selected_starting_eleven['Position'].map(position_order)
-			selected_starting_eleven = selected_starting_eleven.sort_values(by='PositionOrder')
+			'''
+			if wildcard:
+				result_df = recommend_transfers_wildcard(all_players_df, current_bank_value, current_team_value)
+				print(result_df)
+			else:
+				recommendations = recommend_transfers_one_transfer(all_players_df, current_bank_value, current_team_value, your_team_df)
+				print(recommendations)
+			'''
 
-		if not selected_bench.empty:
-			selected_bench = selected_bench.sort_values(by=str(last_gameweek + 1), ascending=False)
-
-		# Print the recommended starting eleven and bench
-		print(f"\n{manager_name}'s Recommended Starting 11 for Gameweek {last_gameweek + 1}:")
-		print(selected_starting_eleven[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1)]])
-
-		print(f"\n{manager_name}'s Recommended Bench for Gameweek {last_gameweek + 1}:")
-		print(selected_bench[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1)]])
-
-		'''
-		if wildcard:
-			result_df = recommend_transfers_wildcard(all_players_df, current_bank_value, current_team_value)
-			print(result_df)
-		else:
-			recommendations = recommend_transfers_one_transfer(all_players_df, current_bank_value, current_team_value, your_team_df)
-			print(recommendations)
-		'''
-
-	print(top_players_by_position)
+		print(top_players_by_position)
 
 
 
