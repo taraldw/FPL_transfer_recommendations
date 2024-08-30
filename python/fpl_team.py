@@ -207,8 +207,13 @@ def main():
 				recommendations = recommend_transfers_one_transfer(all_players_df, current_bank_value, current_team_value, your_team_df)
 				print(recommendations)
 			'''
-
-		print(top_players_by_position)
+		
+		position_keys = {"GK": "goalkeepers", "D": "defenders", "M": "midfielders", "F": "forwards"}
+		
+		for position_key in top_players_by_position:
+			print(f"\nTop 10 {position_keys[position_key]} by BCV for Gameweek {last_gameweek + 1}:")
+			top_players_df = top_players_by_position[position_key]
+			print(top_players_df[['BCV', 'Player', 'Position', 'Team', ' Price ', str(last_gameweek + 1), str(last_gameweek + 2), str(last_gameweek + 3)]])
 
 
 
