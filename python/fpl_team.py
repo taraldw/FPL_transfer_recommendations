@@ -78,6 +78,7 @@ def get_top_players_by_position(dataframe):
 
 def main():
 	df = pd.read_csv('../source_data/TransferAlgorithm.csv', encoding='ISO-8859-1')
+	next_gameweek = int(df.columns[10])
 	df = extract_bcv_values(df)
 	df = filter_dataframe(df)
 	all_players_df = df.sort_values(by='BCV', ascending=False)
@@ -86,9 +87,6 @@ def main():
 
 	matching_names_df = pd.read_csv('../source_data/matching_names.csv')
 	managers_df = pd.read_csv('../source_data/manager_ids_2024.csv')
-
-
-	last_gameweek = 2
 
 	for index, row in managers_df.iterrows():
 		manager_id = row['ID']
@@ -99,7 +97,7 @@ def main():
 
 		if include:
 
-			your_team_df = read_team_from_api(manager_id, last_gameweek)
+			your_team_df = read_team_from_api(manager_id, next_gameweek - 1)
 
 			current_bank_value, current_team_value = read_manager_info_from_api(manager_id)
 			
@@ -142,7 +140,7 @@ def main():
 				print(non_matching_players[['web_name']])
 			
 			print(f"\n{manager_name}'s Full Merged Team Data:")
-			print(merged_team_df_BCV[['web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1), str(last_gameweek + 2), str(last_gameweek + 3)]])
+			print(merged_team_df_BCV[['web_name', 'Position', 'Team', ' Price ', 'BCV', str(next_gameweek), str(next_gameweek + 1), str(next_gameweek + 2)]])
 			
 			
 			# Define FPL team position rules
@@ -151,7 +149,7 @@ def main():
 			bench = {'GK': [], 'D': [], 'M': [], 'F': []}
 
 			# Sort players for the next gameweek and pick the starting 11 and bench players according to FPL rules
-			sorted_players = merged_team_df.sort_values(by=str(last_gameweek + 1), ascending=False)
+			sorted_players = merged_team_df.sort_values(by=str(next_gameweek), ascending=False)
 			# Populate the starting eleven and bench
 			for position, min_count in fpl_positions.items():
 				position_players = sorted_players[sorted_players['Position'] == position]
@@ -190,14 +188,14 @@ def main():
 				selected_starting_eleven = selected_starting_eleven.sort_values(by='PositionOrder')
 
 			if not selected_bench.empty:
-				selected_bench = selected_bench.sort_values(by=str(last_gameweek + 1), ascending=False)
+				selected_bench = selected_bench.sort_values(by=str(next_gameweek), ascending=False)
 
 			# Print the recommended starting eleven and bench
-			print(f"\n{manager_name}'s Recommended Starting 11 for Gameweek {last_gameweek + 1}:")
-			print(selected_starting_eleven[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1)]])
+			print(f"\n{manager_name}'s Recommended Starting 11 for Gameweek {next_gameweek}:")
+			print(selected_starting_eleven[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(next_gameweek)]])
 
-			print(f"\n{manager_name}'s Recommended Bench for Gameweek {last_gameweek + 1}:")
-			print(selected_bench[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(last_gameweek + 1)]])
+			print(f"\n{manager_name}'s Recommended Bench for Gameweek {next_gameweek}:")
+			print(selected_bench[['element', 'web_name', 'Position', 'Team', ' Price ', 'BCV', str(next_gameweek)]])
 
 			'''
 			if wildcard:
@@ -211,9 +209,9 @@ def main():
 		position_keys = {"GK": "goalkeepers", "D": "defenders", "M": "midfielders", "F": "forwards"}
 		
 		for position_key in top_players_by_position:
-			print(f"\nTop 10 {position_keys[position_key]} by BCV for Gameweek {last_gameweek + 1}:")
+			print(f"\nTop 10 {position_keys[position_key]} by BCV for Gameweek {next_gameweek}:")
 			top_players_df = top_players_by_position[position_key]
-			print(top_players_df[['BCV', 'Player', 'Position', 'Team', ' Price ', str(last_gameweek + 1), str(last_gameweek + 2), str(last_gameweek + 3)]])
+			print(top_players_df[['BCV', 'Player', 'Position', 'Team', ' Price ', str(next_gameweek), str(next_gameweek + 1), str(next_gameweek + 2)]])
 
 
 
