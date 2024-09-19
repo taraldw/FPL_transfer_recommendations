@@ -1,5 +1,6 @@
 import pandas as pd
 import requests
+import os
 from transfer_recommendation import recommend_transfers_one_transfer
 from transfer_recommendation import recommend_transfers_wildcard
 
@@ -76,8 +77,20 @@ def get_top_players_by_position(dataframe):
 		top_players_by_position[position] = top_players
 	return top_players_by_position
 
+def get_source_data_path():
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Construct the path to the 'source_data' folder relative to the script
+    source_data_path = os.path.join(script_dir, '../source_data')
+
+    # Return the absolute path
+    return os.path.abspath(source_data_path)
+
 def main():
-	df = pd.read_csv('../source_data/TransferAlgorithm.csv', encoding='ISO-8859-1')
+	source_data_path = get_source_data_path()
+	
+	df = pd.read_csv(f'{source_data_path}/TransferAlgorithm.csv', encoding='ISO-8859-1')
 	next_gameweek = int(df.columns[10])
 	df = extract_bcv_values(df)
 	df = filter_dataframe(df)
@@ -85,8 +98,8 @@ def main():
 
 	top_players_by_position = get_top_players_by_position(all_players_df)
 
-	matching_names_df = pd.read_csv('../source_data/matching_names.csv')
-	managers_df = pd.read_csv('../source_data/manager_ids_2024.csv')
+	matching_names_df = pd.read_csv(f'{source_data_path}/matching_names.csv')
+	managers_df = pd.read_csv(f'{source_data_path}/manager_ids_2024.csv')
 
 	for index, row in managers_df.iterrows():
 		manager_id = row['ID']
@@ -206,12 +219,12 @@ def main():
 				print(recommendations)
 			'''
 		
-		position_keys = {"GK": "goalkeepers", "D": "defenders", "M": "midfielders", "F": "forwards"}
-		
-		for position_key in top_players_by_position:
-			print(f"\nTop 10 {position_keys[position_key]} by BCV for Gameweek {next_gameweek}:")
-			top_players_df = top_players_by_position[position_key]
-			print(top_players_df[['BCV', 'Player', 'Position', 'Team', ' Price ', str(next_gameweek), str(next_gameweek + 1), str(next_gameweek + 2)]])
+	position_keys = {"GK": "goalkeepers", "D": "defenders", "M": "midfielders", "F": "forwards"}
+	
+	for position_key in top_players_by_position:
+		print(f"\nTop 10 {position_keys[position_key]} by BCV for Gameweek {next_gameweek}:")
+		top_players_df = top_players_by_position[position_key]
+		print(top_players_df[['BCV', 'Player', 'Position', 'Team', ' Price ', str(next_gameweek), str(next_gameweek + 1), str(next_gameweek + 2)]])
 
 
 

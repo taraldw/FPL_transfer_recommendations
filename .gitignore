@@ -1,4 +1,4 @@
 fpl-env/
 python/__pycache__
 .vscode/
-.venev/
+.venv/
