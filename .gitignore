@@ -2,3 +2,4 @@ fpl-env/
 python/__pycache__
 .vscode/
 .venv/
+.env
