@@ -1,11 +1,26 @@
 import sys
 import io
+import logging
+import logging.handlers
 from get_fpl_team import load_source_data, process_manager, get_top_players_by_position, get_gameweek_info_from_api
 from update_source_data import fetch_new_source_data_from_gmail
 from send_emails import send_email
 
 
 def main():
+    
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    logger_file_handler = logging.handlers.RotatingFileHandler(
+        "../status.log",
+        maxBytes=1024 * 1024,
+        backupCount=1,
+        encoding="utf8",
+    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logger_file_handler.setFormatter(formatter)
+    logger.addHandler(logger_file_handler)
+    
     # Redirect stdout to a string buffer
     old_stdout = sys.stdout
     sys.stdout = buffer = io.StringIO()
@@ -31,12 +46,12 @@ def main():
         send_email('\n'.join(html_parts), next_gameweek_api)
         # Restore stdout
         sys.stdout = old_stdout
-        print("Email was sent to the user with the updated results.")
+        logger.info("Email was sent to the user with the updated results.")
     else:
         send_email(buffer.getvalue(), next_gameweek_api)
         # Restore stdout
         sys.stdout = old_stdout
-        print('Source data is already up to date. No changes were made.')
+        logger.info("Source data is already up to date. No changes were made.")
 
 if __name__ == "__main__":
     main()
