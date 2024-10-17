@@ -1,26 +1,14 @@
 import sys
 import io
-import logging
-import logging.handlers
 from get_fpl_team import load_source_data, process_manager, get_top_players_by_position, get_gameweek_info_from_api
 from update_source_data import fetch_new_source_data_from_gmail
 from send_emails import send_email
+from handle_logging import initiate_logging
 
 
 def main():
     
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    logger_file_handler = logging.handlers.RotatingFileHandler(
-        "../status.log",
-        maxBytes=1024 * 1024,
-        backupCount=1,
-        encoding="utf8",
-    )
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    logger_file_handler.setFormatter(formatter)
-    logger.addHandler(logger_file_handler)
-    
+    logger = initiate_logging()
     # Redirect stdout to a string buffer
     old_stdout = sys.stdout
     sys.stdout = buffer = io.StringIO()
