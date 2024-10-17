@@ -25,7 +25,7 @@ jobs:
         env:
           EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        run: python worker.py
+        run: python python/worker.py
           
       - name: commit files
         run: |
