@@ -1,8 +1,8 @@
-name: run worker.py daily to check for new emails
+name: run worker.py daily
 
 on:
   schedule:
-    - cron: '0 */1 * * *' # Every hour
+    - cron: '*/10 * * * *' # Every hour: '0 */1 * * *'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,11 +20,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: create env file
+        run: |
+          touch .env
+          echo EMAIL_ADDRESS=${{ secrets.EMAIL_ADDRESS }} >> .env
+          echo EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} >> .env
+          cat .env
           
       - name: execute py script
-        env:
-          EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
         run: python python/worker.py
           
       - name: commit files
