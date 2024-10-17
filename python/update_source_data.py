@@ -11,7 +11,7 @@ def fetch_new_source_data_from_gmail(next_gameweek_api, last_gameweek_api_deadli
     is_updated = False
     
     # Load environment variables from .env file
-    load_dotenv('../.env')
+    load_dotenv(get_env_file_path())
 
     # Get the email credentials from environment variables
     email_address = os.getenv('EMAIL_ADDRESS')
@@ -49,12 +49,12 @@ def fetch_new_source_data_from_gmail(next_gameweek_api, last_gameweek_api_deadli
                 is_found = True
                 url = csv_links[0]
                 response = requests.get(url)
-                temp_file_path = f"{get_source_data_path()}\\TransferAlgorithm_temp.csv"
+                temp_file_path = f"{get_source_data_path()}/TransferAlgorithm_temp.csv"
                 with open(temp_file_path, 'wb') as f:
                     f.write(response.content)
             
             # Check if the content of the attachment is different from the existing file
-            existing_file_path = f"{get_source_data_path()}\\TransferAlgorithm.csv"
+            existing_file_path = f"{get_source_data_path()}/TransferAlgorithm.csv"
             
             if os.path.exists(existing_file_path):
                 with open(existing_file_path, 'rb') as f:
@@ -83,3 +83,14 @@ def fetch_new_source_data_from_gmail(next_gameweek_api, last_gameweek_api_deadli
 
     # Return the boolean variable indicating if the content is updated
     return is_found, is_updated
+
+
+def get_env_file_path():
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Construct the path to the 'source_data' folder relative to the script
+    env_file_path = os.path.join(script_dir, '../.env')
+
+    # Return the absolute path
+    return os.path.abspath(env_file_path)
